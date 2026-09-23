@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبۆردی پلاتفۆرمی هۆستینگ</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; margin: 0; }
+        .container { max-width: 700px; margin: 20px auto; background: #1e293b; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h2 { color: #38bdf8; border-bottom: 2px solid #334155; padding-bottom: 10px; margin-top: 0; }
+        .stats-grid { display: flex; gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: #334155; padding: 15px; border-radius: 8px; flex: 1; text-align: center; }
+        .stat-card h3 { margin: 0; color: #38bdf8; font-size: 22px; }
+        .stat-card p { margin: 5px 0 0; color: #94a3b8; font-size: 14px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #94a3b8; }
+        input[type="text"], input[type="file"], input[type="email"], input[type="password"] { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 5px; box-sizing: border-box; }
+        button { background: #0284c7; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; }
+        button:hover { background: #0369a1; }
+        .btn-google { background: #ea4335 !important; display: flex; align-items: center; justify-content: center; gap: 8px; color: white; padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; cursor: pointer; border: none; width: 100%; }
+        .btn-google:hover { background: #d33828 !important; }
+        .btn-github { background: #24292e !important; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; color: white; padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; }
+        .btn-github:hover { background: #1b1f23 !important; }
+        .btn-danger { background: #ef4444 !important; }
+        ul { list-style: none; padding: 0; }
+        li { background: #334155; margin: 10px 0; padding: 12px; border-radius: 5px; }
+        .app-item { display: flex; justify-content: space-between; align-items: center; }
+        .btn-group button, .btn-group a { background: #0284c7; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; border: none; cursor: pointer; margin-left: 3px; font-size: 12px; }
+        .logs-box { background: #090d16; color: #38bdf8; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; margin-top: 10px; max-height: 120px; overflow-y: auto; display: none; white-space: pre-wrap; }
+        .github-repos { margin-top: 15px; background: #0f172a; padding: 10px; border-radius: 5px; display: none; }
+        .github-repos ul { max-height: 150px; overflow-y: auto; }
+        .github-repos li { background: #1e293b; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        .expiry-text { font-size: 11px; color: #38bdf8; margin-top: 4px; display: block; }
+        #auth-container { text-align: center; padding: 20px; }
+        #verify-section { display: none; margin-top: 15px; background: #0f172a; padding: 15px; border-radius: 8px; }
+        #dashboard-container { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- بەشی چوونەژوورەوە بە گەیمل، پاسوۆرد و کۆدی پشتڕاستکردنەوە -->
+    <div class="container" id="auth-container">
+        <h2>چوونەژوورەوە یان تۆمارکردن</h2>
+        <p style="color: #94a3b8; font-size: 14px;">گەیملی خۆت و پاسوۆردەکەت بنووسە:</p>
+        
+        <div class="form-group">
+            <input type="email" id="googleEmail" placeholder="example@gmail.com">
+        </div>
+        <div class="form-group">
+            <input type="password" id="userPassword" placeholder="پاسوۆردی ئەکاونتەکەت">
+        </div>
+        <button class="btn-google" onclick="requestVerificationCode()">ناردنی کۆدی پشتڕاستکردنەوە بۆ گەیمل</button>
+
+        <!-- بەشی داخڵکردنی کۆدی نێردراو -->
+        <div id="verify-section">
+            <label style="color: #38bdf8; margin-bottom: 5px;">کۆدی ٦ ڕەقمی (سەیری ترموکس بکە):</label>
+            <input type="text" id="verificationCode" placeholder="بۆ نموونە: 123456" style="margin-bottom: 10px;">
+            <button onclick="verifyAndLogin()">دڵنیابوونەوە و چوونەژوورەوە</button>
+        </div>
+    </div>
+
+    <!-- داشبۆردی سەرەکی -->
+    <div class="container" id="dashboard-container">
+        <h2>داشبۆردی بەڕێوەبردنی هۆستینگ</h2>
+        <p id="user-info-text" style="color: #38bdf8; font-size: 13px;"></p>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3 id="total-apps">0</h3>
+                <p>پڕۆژە چالاکەکانی من</p>
+            </div>
+            <div class="stat-card">
+                <h3 style="color: #22c55e;">ئۆنلاین</h3>
+                <p>دۆخی سێرڤەر (30 ڕۆژ)</p>
+            </div>
+        </div>
+
+        <div class="form-group" id="github-auth-section">
+            <label>بەستنەوە بە هەژماری گیتهاب:</label>
+            <a id="githubLoginBtn" href="#" class="btn-github">بەستنەوە لەگەڵ گیتهاب (Connect GitHub)</a>
+        </div>
+
+        <div id="githubReposContainer" class="github-repos">
+            <label style="color: #38bdf8; margin-bottom: 5px;">پڕۆژەکانی گیتهابت (کلیک لەسەر دیپلۆی بکە):</label>
+            <ul id="gh-repo-list"></ul>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;">
+
+        <div class="form-group">
+            <label>ناوی پڕۆژە:</label>
+            <input type="text" id="appName" placeholder="بۆ نموونە: myapp">
+        </div>
+        <div class="form-group">
+            <label>هەڵبژاردنی فایلی پڕۆژە (.js یان .py):</label>
+            <input type="file" id="projectFile">
+        </div>
+        <button onclick="uploadApp()">بڵاوکردنەوەی نوێ (Deploy)</button>
+        <button onclick="logout()" class="btn-danger" style="margin-top: 15px;">چوونەدەرەوە (Logout)</button>
+    </div>
+
+    <div class="container" id="projects-container" style="display: none;">
+        <h2>پڕۆژە تایبەتەکانی من</h2>
+        <ul id="app-list"><li>هیچ پڕۆژەیەک کار ناکات...</li></ul>
+    </div>
+
+    <script>
+        let userId = localStorage.getItem('user_unique_id');
+        let userEmail = localStorage.getItem('user_email');
+
+        if (userId && userEmail) {
+            showDashboard(userEmail);
+        }
+
+        async function requestVerificationCode() {
+            const emailInput = document.getElementById('googleEmail').value.trim();
+            if (!emailInput || !emailInput.endsWith('@gmail.com')) {
+                alert('تکایە گەیملێکی دروست بنووسە کە کۆتاییەکەی @gmail.com بێت!');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/send-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: emailInput })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    document.getElementById('verify-section').style.display = 'block';
+                } else {
+                    alert('هەڵە: ' + data.error);
+                }
+            } catch (err) {
+                alert('کێشە لە پەیوەندیکردن بە سێرڤەرەوە ڕووی دا.');
+            }
+        }
+
+        async function verifyAndLogin() {
+            const emailInput = document.getElementById('googleEmail').value.trim();
+            const passwordInput = document.getElementById('userPassword').value.trim();
+            const codeInput = document.getElementById('verificationCode').value.trim();
+
+            if (!codeInput) {
+                alert('تکایە کۆدی پشتڕاستکردنەوە بنووسە!');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/verify-and-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: emailInput, code: codeInput, password: passwordInput })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    localStorage.setItem('user_unique_id', data.userId);
+                    localStorage.setItem('user_email', data.email);
+                    userId = data.userId;
+                    userEmail = data.email;
+                    showDashboard(userEmail);
+                } else {
+                    alert('هەڵە: ' + data.error);
+                }
+            } catch (err) {
+                alert('کێشە لە پشکنینی کۆد ڕووی دا.');
+            }
+        }
+
+        function showDashboard(email) {
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('dashboard-container').style.display = 'block';
+            document.getElementById('projects-container').style.display = 'block';
+            document.getElementById('user-info-text').innerText = `تۆ لۆگین بوویت بە گەیملی: ${email}`;
+            
+            setInterval(fetchDashboard, 3000);
+            fetchDashboard();
+        }
+
+        function logout() {
+            localStorage.removeItem('user_unique_id');
+            localStorage.removeItem('user_email');
+            localStorage.removeItem('github_token');
+            location.reload();
+        }
+
+        const CLIENT_ID = 'YOUR_CLIENT_ID'; 
+        document.getElementById('githubLoginBtn').href = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}`;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const githubToken = urlParams.get('github_token');
+        if (githubToken) {
+            localStorage.setItem('github_token', githubToken);
+            window.history.replaceState({}, document.title, "/");
+        }
+
+        const savedToken = localStorage.getItem('github_token');
+        if (savedToken && userId) {
+            document.getElementById('githubLoginBtn').style.display = 'none';
+            fetchUserRepos(savedToken);
+        }
+
+        async function fetchUserRepos(token) {
+            const repoContainer = document.getElementById('githubReposContainer');
+            const repoList = document.getElementById('gh-repo-list');
+            repoContainer.style.display = 'block';
+            repoList.innerHTML = '<li>دەهێنرێت...</li>';
+
+            try {
+                const res = await fetch('https://api.github.com/user/repos', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const repos = await res.json();
+                repoList.innerHTML = '';
+
+                if (repos.length === 0) {
+                    repoList.innerHTML = '<li>هیچ پڕۆژەیەک نەدۆزرایەوە.</li>';
+                    return;
+                }
+
+                repos.forEach(repo => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>${repo.name}</span> 
+                        <div>
+                            <a href="${repo.html_url}" target="_blank" style="color: #38bdf8; margin-left: 10px;">بینین</a>
+                            <button onclick="deployGithubRepo('${repo.clone_url}', '${repo.name}')" style="background: #22c55e; padding: 3px 8px; font-size: 11px; width: auto;">دیپلۆی</button>
+                        </div>
+                    `;
+                    repoList.appendChild(li);
+                });
+            } catch (err) {
+                repoList.innerHTML = '<li style="color: #ef4444;">هەڵە لە هێنانی پڕۆژەکان.</li>';
+            }
+        }
+
+        async function deployGithubRepo(cloneUrl, repoName) {
+            const appName = prompt('ناوی پڕۆژە بۆ هۆستینگ بنووسە:', repoName);
+            if (!appName) return;
+
+            alert('پڕۆژەکە لە گیتهابەوە دەدابەزێت و پاکەتەکانی دادەمەزرێن، چەند ساتێک چاوەڕوان بە...');
+
+            try {
+                const res = await fetch('/deploy-github', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repoUrl: cloneUrl, appName: appName, userId: userId })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    alert('پڕۆژەکەی گیتهاب بە سەرکەوتوویی کار پێکرا!');
+                    fetchDashboard();
+                } else {
+                    alert('هەڵە: ' + result.error);
+                }
+            } catch (err) {
+                alert('کێشە لە ناردنی داواکاری دیپلۆی ڕووی دا.');
+            }
+        }
+
+        async function fetchDashboard() {
+            if (!userId) return;
+            const res = await fetch(`/api/stats?userId=${userId}`);
+            const data = await res.json();
+            document.getElementById('total-apps').innerText = data.totalApps;
+            const list = document.getElementById('app-list');
+            list.innerHTML = '';
+            
+            const entries = Object.entries(data.apps);
+            if (entries.length === 0) {
+                list.innerHTML = '<li>هیچ پڕۆژەیەک کار ناکات.</li>';
+                return;
+            }
+
+            for (const [name, info] of entries) {
+                const expiryDate = new Date(info.expiresAt).toLocaleString('en-US');
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="app-item">
+                        <div>
+                            <strong>${name}</strong> <small>(پۆرت: ${info.port})</small>
+                            <span class="expiry-text">بەسەرچوون: ${expiryDate}</span>
+                        </div>
+                        <div class="btn-group">
+                            <button onclick="toggleLogs('${name}')">لۆگ</button>
+                            <a href="/app/${name}" target="_blank">کردنەوە</a>
+                            <button class="btn-danger" onclick="deleteApp('${name}')">سڕینەوە</button>
+                        </div>
+                    </div>
+                    <div id="logs-${name}" class="logs-box">${info.logs.join('\n') || 'هیچ لۆگێک نییە...'}</div>
+                `;
+                list.appendChild(li);
+            }
+        }
+
+        function toggleLogs(appName) {
+            const box = document.getElementById(`logs-${appName}`);
+            box.style.display = box.style.display === 'block' ? 'none' : 'block';
+        }
+
+        async function uploadApp() {
+            const appName = document.getElementById('appName').value;
+            const fileInput = document.getElementById('projectFile').files[0];
+            if (!appName || !fileInput) {
+                alert('ناوی پڕۆژە و فایل بنووسە!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('appName', appName);
+            formData.append('projectFile', fileInput);
+            formData.append('userId', userId);
+
+            const res = await fetch('/deploy-file', { method: 'POST', body: formData });
+            const result = await res.json();
+            if (result.success) {
+                alert('پڕۆژەکە بە سەرکەوتوویی بۆ ماوەی مانگێک هۆست کرا!');
+                fetchDashboard();
+            } else {
+                alert('هەڵە: ' + result.error);
+            }
+        }
+
+        async function deleteApp(appName) {
+            if (!confirm(`سڕینەوەی ${appName}؟`)) return;
+            const res = await fetch(`/api/apps/${appName}`, { method: 'DELETE' });
+            if ((await res.json()).success) fetchDashboard();
+        }
+    </script>
+</body>
+</html>
